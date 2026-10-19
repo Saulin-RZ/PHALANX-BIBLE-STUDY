@@ -21,38 +21,6 @@ export const DEFAULT_USERS: UserProfile[] = [
     createdAt: '2026-10-01T00:00:00Z',
     lastActive: new Date().toISOString(),
   },
-  {
-    id: 'usr-saul',
-    username: 'saul',
-    name: 'Pastor Saul R.',
-    email: 'saul@church.org',
-    role: 'Senior Pastor',
-    avatarInitials: 'SR',
-    color: '#78350f', // deep amber
-    createdAt: '2026-10-01T00:00:00Z',
-    lastActive: new Date().toISOString(),
-  },
-  {
-    id: 'usr-mark',
-    username: 'mark',
-    name: 'Associate Pastor Mark',
-    email: 'mark@church.org',
-    role: 'Associate Pastor',
-    avatarInitials: 'AM',
-    color: '#065f46', // emerald
-    createdAt: '2026-10-05T00:00:00Z',
-    lastActive: new Date().toISOString(),
-  },
-  {
-    id: 'usr-guest',
-    username: 'guest',
-    name: 'Guest Preacher',
-    role: 'Guest Preacher',
-    avatarInitials: 'GP',
-    color: '#44403c', // stone
-    createdAt: '2026-10-10T00:00:00Z',
-    lastActive: new Date().toISOString(),
-  },
 ];
 
 /**
@@ -370,8 +338,7 @@ export function loadUserVault(userId: string): VaultItem[] {
       }
     }
 
-    // Check if legacy data exists to migrate to primary user
-    if (userId === 'usr-saul' || userId === 'usr-admin') {
+    if (userId === 'usr-admin') {
       const legacyRaw = localStorage.getItem(LEGACY_STORAGE_KEY);
       if (legacyRaw) {
         try {
@@ -379,8 +346,8 @@ export function loadUserVault(userId: string): VaultItem[] {
           if (Array.isArray(legacyItems) && legacyItems.length > 0) {
             const tagged = legacyItems.map((item: VaultItem) => ({
               ...item,
-              authorId: item.authorId || 'usr-saul',
-              authorName: item.authorName || 'Pastor Saul R.',
+              authorId: 'usr-admin',
+              authorName: 'ADMIN',
             }));
             saveUserVault(userId, tagged);
             return tagged;
@@ -389,11 +356,11 @@ export function loadUserVault(userId: string): VaultItem[] {
           // ignore
         }
       }
-      // Seed default initial vault
+      // Seed default initial vault for ADMIN
       const seeded = INITIAL_VAULT.map((item) => ({
         ...item,
-        authorId: item.authorId || (userId === 'usr-admin' ? 'usr-saul' : userId),
-        authorName: item.authorName || 'Pastor Saul R.',
+        authorId: 'usr-admin',
+        authorName: 'ADMIN',
       }));
       saveUserVault(userId, seeded);
       return seeded;
