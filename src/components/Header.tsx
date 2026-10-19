@@ -28,8 +28,8 @@ export const Header: React.FC<HeaderProps> = ({
               onClick={() => setActiveTab('vault')}
               className="text-left group cursor-pointer focus:outline-none"
             >
-              <div className="text-xl sm:text-2xl font-serif-title font-semibold tracking-tight text-stone-900 group-hover:text-stone-700 transition-colors">
-                Kerygma
+              <div className="text-xl sm:text-2xl font-serif-title font-bold tracking-wider text-stone-900 group-hover:text-stone-700 transition-colors uppercase">
+                PHALANX
               </div>
             </button>
             {activeItemTitle && activeTab !== 'vault' && (

@@ -1,5 +1,5 @@
 {
-  "name": "Kerygma — Sermon & Bible Study Vault",
+  "name": "PHALANX — Sermon & Bible Study Vault",
   "description": "Studio for sermon drafting, biblical exegesis, scripture cross-referencing, preaching pulpit notes, printable handouts, and Git-compatible markdown vaults.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]

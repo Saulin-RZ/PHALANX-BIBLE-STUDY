@@ -417,7 +417,7 @@ export const HandoutView: React.FC<HandoutViewProps> = ({
 
         {/* Footer */}
         <div className="mt-12 pt-4 border-t border-stone-200 text-center text-xs text-stone-400 font-sans">
-          <span>Kerygma Sermon Vault · Published for Christ’s Church</span>
+          <span>PHALANX Sermon Vault · Published for Christ’s Church</span>
         </div>
       </div>
     </div>

@@ -154,7 +154,7 @@ export const VaultView: React.FC<VaultViewProps> = ({
             />
             <div className="absolute inset-0 bg-stone-900/10 mix-blend-multiply" />
             <div className="absolute bottom-3 right-3 bg-stone-900/70 backdrop-blur-xs text-[11px] text-stone-200 px-2 py-0.5 rounded">
-              Kerygma Study Desk
+              PHALANX Study Desk
             </div>
           </div>
         </div>

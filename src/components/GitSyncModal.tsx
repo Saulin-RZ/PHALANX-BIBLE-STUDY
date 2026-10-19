@@ -103,7 +103,7 @@ git push -u origin main`;
         <div className="p-6 space-y-6 text-sm text-stone-700">
           <div>
             <p className="leading-relaxed text-stone-600">
-              Kerygma saves every sermon manuscript, exegesis study, and outline in clean Markdown with industry-standard YAML frontmatter. You can version-control your entire library on GitHub, share it publicly, or deploy it to a digital garden or website.
+              PHALANX saves every sermon manuscript, exegesis study, and outline in clean Markdown with industry-standard YAML frontmatter. You can version-control your entire library on GitHub, share it publicly, or deploy it to a digital garden or website.
             </p>
           </div>
 

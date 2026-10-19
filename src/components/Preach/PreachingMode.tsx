@@ -383,7 +383,7 @@ export const PreachingMode: React.FC<PreachingModeProps> = ({ item, onExit, onVi
 
         {/* Printable Footer */}
         <div className="mt-16 pt-8 border-t border-stone-300 dark:border-stone-800 text-xs text-stone-400 flex items-center justify-between font-sans">
-          <span>Kerygma Sermon Studio · {item.primaryScripture}</span>
+          <span>PHALANX Sermon Studio · {item.primaryScripture}</span>
           <span>Date: {item.date}</span>
         </div>
       </main>

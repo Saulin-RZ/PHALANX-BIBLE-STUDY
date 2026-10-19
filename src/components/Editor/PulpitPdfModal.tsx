@@ -303,7 +303,7 @@ export const PulpitPdfModal: React.FC<PulpitPdfModalProps> = ({ isOpen, onClose,
 
             {/* Print Footer */}
             <div className="mt-12 pt-3 border-t border-stone-200 text-xs text-stone-400 flex items-center justify-between font-sans">
-              <span>Kerygma Sermon Vault · {item.primaryScripture}</span>
+              <span>PHALANX Sermon Vault · {item.primaryScripture}</span>
               <span>Preached: {item.date}</span>
             </div>
           </div>
