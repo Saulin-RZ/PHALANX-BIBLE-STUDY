@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { X, Printer, Download, Eye, FileText, Check, Settings2, BookOpen } from 'lucide-react';
 import { VaultItem } from '../../types';
-import { downloadFile, generatePulpitHtml } from '../../utils/vaultStorage';
+import { downloadFile, generatePulpitHtml, printPulpitDocument } from '../../utils/vaultStorage';
 
 interface PulpitPdfModalProps {
   isOpen: boolean;
@@ -17,7 +17,11 @@ export const PulpitPdfModal: React.FC<PulpitPdfModalProps> = ({ isOpen, onClose,
   if (!isOpen) return null;
 
   const handlePrint = () => {
-    window.print();
+    printPulpitDocument(item, {
+      fontSize,
+      includeOutline,
+      includeExegesis,
+    });
   };
 
   const handleDownloadHtml = () => {

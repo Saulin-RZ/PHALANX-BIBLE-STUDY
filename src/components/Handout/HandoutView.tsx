@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Printer, Download, Plus, Trash2, CheckCircle2, FileText, ArrowLeft, Eye, EyeOff } from 'lucide-react';
 import { VaultItem, HandoutItem } from '../../types';
-import { downloadFile } from '../../utils/vaultStorage';
+import { downloadFile, printHandoutDocument } from '../../utils/vaultStorage';
 
 interface HandoutViewProps {
   item: VaultItem;
@@ -80,7 +80,7 @@ export const HandoutView: React.FC<HandoutViewProps> = ({
   };
 
   const handlePrint = () => {
-    window.print();
+    printHandoutDocument(item, isLeaderKey);
   };
 
   // Export clean markdown handout
