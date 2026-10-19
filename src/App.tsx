@@ -24,13 +24,26 @@ import {
   deleteItemFromTargetVault,
   cloneSermonToWorkbench,
   canUserEditItem,
-  saveUserVault
+  saveUserVault,
+  exportFullDatabaseBackup
 } from './utils/authStorage';
+import { downloadFile } from './utils/vaultStorage';
 
 export default function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => getCurrentUser());
   const [users, setUsers] = useState<UserProfile[]>(() => loadUsers());
   const [isUserSwitcherOpen, setIsUserSwitcherOpen] = useState(false);
+
+  // Prompt to download global backup before closing the page
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      const message = 'Would you like to download a global backup before exiting?';
+      e.returnValue = message;
+      return message;
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   // Global Church Library containing all sermons from all preachers
   const [churchItems, setChurchItems] = useState<VaultItem[]>(() => {

@@ -130,14 +130,10 @@ export function saveUsers(users: UserProfile[]): void {
 export function getCurrentUserId(): string | null {
   try {
     const id = localStorage.getItem(CURRENT_USER_ID_KEY);
-    if (id === 'LOGGED_OUT') return null;
-    if (id) return id;
-    const users = loadUsers();
-    const defaultId = users[0]?.id || 'usr-admin';
-    setCurrentUserId(defaultId);
-    return defaultId;
+    if (!id || id === 'LOGGED_OUT') return null;
+    return id;
   } catch {
-    return 'usr-admin';
+    return null;
   }
 }
 
