@@ -96,19 +96,19 @@ export const PreachingMode: React.FC<PreachingModeProps> = ({ item, onExit, onVi
   // High-contrast Big Idea styling for lectern distance readability
   const bigIdeaStyles = {
     light: {
-      container: 'bg-[#FFFDF7] border-2 border-amber-600/80 shadow-xs',
-      label: 'text-amber-950 font-bold',
-      text: 'text-stone-950 font-bold',
+      container: 'bg-amber-50/90 border-2 border-amber-700 shadow-sm',
+      label: 'text-amber-900 font-black tracking-wider',
+      text: 'text-stone-950 font-extrabold',
     },
     dark: {
-      container: 'bg-[#1E1E1E] border-2 border-amber-400/70 shadow-xs',
-      label: 'text-amber-400 font-bold',
-      text: 'text-stone-50 font-bold',
+      container: 'bg-[#1E1E1E] border-2 border-amber-400 shadow-md',
+      label: 'text-amber-400 font-black tracking-wider',
+      text: 'text-amber-50 font-extrabold',
     },
     sepia: {
-      container: 'bg-[#EADEBE] border-2 border-[#8C4A15] shadow-xs',
-      label: 'text-[#612E08] font-bold',
-      text: 'text-[#1C1208] font-bold',
+      container: 'bg-[#E5D4B3] border-2 border-[#78350F] shadow-sm',
+      label: 'text-[#78350F] font-black tracking-wider',
+      text: 'text-[#291808] font-extrabold',
     },
   }[theme];
 

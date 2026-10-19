@@ -487,48 +487,49 @@ export function printPulpitDocument(
   } = {}
 ): void {
   const html = generatePulpitHtml(item, options);
-  
-  // Remove existing print frame if any
-  const existing = document.getElementById('phalanx-pulpit-iframe');
-  if (existing) {
-    existing.remove();
-  }
-
-  const iframe = document.createElement('iframe');
-  iframe.id = 'phalanx-pulpit-iframe';
-  iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = '0';
-  iframe.style.visibility = 'hidden';
-  document.body.appendChild(iframe);
-
-  const doc = iframe.contentWindow?.document;
-  if (!doc) {
-    window.print();
-    return;
-  }
-
-  doc.open();
-  doc.write(html);
-  doc.close();
-
-  // Allow web fonts and styles to render before triggering browser print
-  setTimeout(() => {
-    try {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-    } catch (err) {
-      console.error('Error invoking iframe print', err);
-      window.print();
-    } finally {
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const printWindow = window.open(url, '_blank', 'width=900,height=800');
+  if (printWindow) {
+    printWindow.onload = () => {
       setTimeout(() => {
-        iframe.remove();
-      }, 3000);
+        printWindow.print();
+      }, 300);
+    };
+  } else {
+    const existing = document.getElementById('phalanx-pulpit-iframe');
+    if (existing) existing.remove();
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'phalanx-pulpit-iframe';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.style.visibility = 'hidden';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(html);
+      doc.close();
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (err) {
+          console.error('Error invoking iframe print', err);
+        } finally {
+          setTimeout(() => {
+            iframe.remove();
+          }, 3000);
+        }
+      }, 400);
     }
-  }, 350);
+  }
 }
 
 /**
@@ -769,45 +770,49 @@ export function generateHandoutHtml(item: VaultItem, isLeaderKey: boolean): stri
  */
 export function printHandoutDocument(item: VaultItem, isLeaderKey: boolean): void {
   const html = generateHandoutHtml(item, isLeaderKey);
-  const existing = document.getElementById('phalanx-handout-iframe');
-  if (existing) {
-    existing.remove();
-  }
-
-  const iframe = document.createElement('iframe');
-  iframe.id = 'phalanx-handout-iframe';
-  iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = '0';
-  iframe.style.visibility = 'hidden';
-  document.body.appendChild(iframe);
-
-  const doc = iframe.contentWindow?.document;
-  if (!doc) {
-    window.print();
-    return;
-  }
-
-  doc.open();
-  doc.write(html);
-  doc.close();
-
-  setTimeout(() => {
-    try {
-      iframe.contentWindow?.focus();
-      iframe.contentWindow?.print();
-    } catch (err) {
-      console.error('Error invoking iframe print', err);
-      window.print();
-    } finally {
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const printWindow = window.open(url, '_blank', 'width=900,height=800');
+  if (printWindow) {
+    printWindow.onload = () => {
       setTimeout(() => {
-        iframe.remove();
-      }, 3000);
+        printWindow.print();
+      }, 300);
+    };
+  } else {
+    const existing = document.getElementById('phalanx-handout-iframe');
+    if (existing) existing.remove();
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'phalanx-handout-iframe';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
+    iframe.style.visibility = 'hidden';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document;
+    if (doc) {
+      doc.open();
+      doc.write(html);
+      doc.close();
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (err) {
+          console.error('Error invoking iframe print', err);
+        } finally {
+          setTimeout(() => {
+            iframe.remove();
+          }, 3000);
+        }
+      }, 400);
     }
-  }, 350);
+  }
 }
 
 export async function exportVaultAsGitRepoZip(items: VaultItem[]): Promise<void> {

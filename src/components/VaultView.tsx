@@ -14,18 +14,25 @@ import {
   Layers,
   Clock,
   Trash2,
-  Copy
+  Copy,
+  Lock,
+  Globe,
+  User,
+  Shield,
+  Crown
 } from 'lucide-react';
 import { VaultItem, VaultItemType, SermonStatus, UserProfile } from '../types';
 import deskHeroImage from '../assets/images/sermon_manuscript_desk_1792367924247.jpg';
 import { convertItemToMarkdown, downloadFile } from '../utils/vaultStorage';
+import { canUserEditItem, isUserAdmin } from '../utils/authStorage';
 
 interface VaultViewProps {
   items: VaultItem[];
   currentUser?: UserProfile;
   onSelectItem: (item: VaultItem, view: 'studio' | 'preach' | 'handout') => void;
   onNewItem: (type?: VaultItemType) => void;
-  onDeleteItem: (id: string) => void;
+  onDeleteItem: (id: string, authorId?: string) => void;
+  onCloneItem?: (item: VaultItem) => void;
   onOpenGitModal: () => void;
   onOpenBibleExplorer: (passage?: string) => void;
   onOpenUserSwitcher?: () => void;
@@ -37,14 +44,19 @@ export const VaultView: React.FC<VaultViewProps> = ({
   onSelectItem,
   onNewItem,
   onDeleteItem,
+  onCloneItem,
   onOpenGitModal,
   onOpenBibleExplorer,
   onOpenUserSwitcher,
 }) => {
+  const [libraryScope, setLibraryScope] = useState<'global' | 'my'>('global');
+  const [selectedAuthor, setSelectedAuthor] = useState<string | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<VaultItemType | 'all'>('all');
   const [selectedStatus, setSelectedStatus] = useState<SermonStatus | 'all'>('all');
   const [selectedTag, setSelectedTag] = useState<string | 'all'>('all');
+
+  const userIsAdmin = isUserAdmin(currentUser || null);
 
   // Compute all available tags
   const allTags = useMemo(() => {
@@ -55,13 +67,48 @@ export const VaultView: React.FC<VaultViewProps> = ({
     return Array.from(set).sort();
   }, [items]);
 
+  // Compute all distinct authors in the library
+  const allAuthors = useMemo(() => {
+    const set = new Set<string>();
+    items.forEach((item) => {
+      const name = item.authorName || item.preacher;
+      if (name) set.add(name);
+    });
+    return Array.from(set).sort();
+  }, [items]);
+
+  // Count items for each scope
+  const myItemsCount = useMemo(() => {
+    if (!currentUser) return 0;
+    return items.filter((item) => {
+      if (item.authorId) return item.authorId === currentUser.id;
+      return currentUser.id === 'usr-saul' || (item.preacher && item.preacher.includes(currentUser.name));
+    }).length;
+  }, [items, currentUser]);
+
   // Filtered items
   const filteredItems = useMemo(() => {
     return items.filter((item) => {
+      // Library Scope Filter
+      if (libraryScope === 'my' && currentUser) {
+        const isMine = item.authorId
+          ? item.authorId === currentUser.id
+          : currentUser.id === 'usr-saul' || (item.preacher && item.preacher.includes(currentUser.name));
+        if (!isMine) return false;
+      }
+
+      // Preacher / Author filter
+      if (selectedAuthor !== 'all') {
+        const author = item.authorName || item.preacher;
+        if (author !== selectedAuthor) return false;
+      }
+
+      // Type, Status, Tag
       if (selectedType !== 'all' && item.type !== selectedType) return false;
       if (selectedStatus !== 'all' && item.status !== selectedStatus) return false;
       if (selectedTag !== 'all' && !item.tags.includes(selectedTag)) return false;
 
+      // Text query
       if (!searchQuery.trim()) return true;
       const q = searchQuery.toLowerCase();
       return (
@@ -69,12 +116,14 @@ export const VaultView: React.FC<VaultViewProps> = ({
         (item.subtitle && item.subtitle.toLowerCase().includes(q)) ||
         (item.series && item.series.toLowerCase().includes(q)) ||
         item.primaryScripture.toLowerCase().includes(q) ||
+        (item.preacher && item.preacher.toLowerCase().includes(q)) ||
+        (item.authorName && item.authorName.toLowerCase().includes(q)) ||
         item.tags.some((t) => t.toLowerCase().includes(q)) ||
         item.bigIdea.toLowerCase().includes(q) ||
         item.manuscript.toLowerCase().includes(q)
       );
     });
-  }, [items, selectedType, selectedStatus, selectedTag, searchQuery]);
+  }, [items, libraryScope, selectedAuthor, selectedType, selectedStatus, selectedTag, searchQuery, currentUser]);
 
   // Aggregate Vault Stats
   const stats = useMemo(() => {
@@ -92,10 +141,14 @@ export const VaultView: React.FC<VaultViewProps> = ({
     downloadFile(md, filename);
   };
 
-  const handleDelete = (e: React.MouseEvent, id: string) => {
+  const handleDelete = (e: React.MouseEvent, item: VaultItem) => {
     e.stopPropagation();
-    if (confirm('Are you sure you want to remove this document from your vault?')) {
-      onDeleteItem(id);
+    const msg = userIsAdmin && item.authorId !== currentUser?.id
+      ? `ADMIN OVERRIDE: Are you sure you want to delete ${item.authorName || item.preacher}'s sermon "${item.title}"?`
+      : `Are you sure you want to remove "${item.title}" from the vault?`;
+
+    if (confirm(msg)) {
+      onDeleteItem(item.id, item.authorId);
     }
   };
 
@@ -123,7 +176,9 @@ export const VaultView: React.FC<VaultViewProps> = ({
                       style={{ backgroundColor: currentUser.color || '#78350f' }}
                     />
                     <span className="font-semibold">{currentUser.name}</span>
-                    <span className="text-stone-500 font-sans hidden sm:inline">({currentUser.role})</span>
+                    <span className="text-stone-500 font-sans hidden sm:inline">
+                      ({userIsAdmin ? 'Master Admin' : currentUser.role})
+                    </span>
                     <span className="text-[10px] text-stone-400 group-hover:text-stone-900 border-l border-stone-200 pl-1.5 uppercase font-mono transition-colors">
                       Switch
                     </span>
@@ -134,7 +189,7 @@ export const VaultView: React.FC<VaultViewProps> = ({
                 Crafted for the Pulpit, Anchored in the Word
               </h1>
               <p className="mt-3 text-stone-600 text-sm sm:text-base leading-relaxed max-w-xl font-reading">
-                A sanctuary for pastoral manuscript drafting, verse-by-verse exegesis, canonical cross-referencing, and seamless preaching notes with congregation handouts.
+                A shared sanctuary for pastoral manuscript drafting, verse-by-verse exegesis, canonical cross-referencing, and seamless preaching notes with congregation handouts.
               </p>
             </div>
 
@@ -144,7 +199,7 @@ export const VaultView: React.FC<VaultViewProps> = ({
                 <span className="block text-2xl font-serif-title font-semibold text-stone-900 tabular-nums">
                   {stats.sermonsCount}
                 </span>
-                <span className="text-xs text-stone-500">Sermons Prepared</span>
+                <span className="text-xs text-stone-500">Church Sermons</span>
               </div>
               <div>
                 <span className="block text-2xl font-serif-title font-semibold text-stone-900 tabular-nums">
@@ -176,10 +231,80 @@ export const VaultView: React.FC<VaultViewProps> = ({
               className="absolute inset-0 w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-stone-900/10 mix-blend-multiply" />
-            <div className="absolute bottom-3 right-3 bg-stone-900/70 backdrop-blur-xs text-[11px] text-stone-200 px-2 py-0.5 rounded">
-              PHALANX Study Desk
+            <div className="absolute bottom-3 right-3 bg-stone-900/70 backdrop-blur-xs text-[11px] text-stone-200 px-2 py-0.5 rounded flex items-center gap-1.5">
+              <span>PHALANX Study Desk</span>
+              {userIsAdmin && (
+                <span className="bg-red-800 text-white text-[10px] px-1.5 py-0.2 rounded font-mono uppercase font-bold">
+                  ADMIN
+                </span>
+              )}
             </div>
           </div>
+        </div>
+      </section>
+
+      {/* Library Scope Selector Strip (Global Library vs My Personal Manuscripts) */}
+      <section className="bg-white border border-stone-200 rounded-lg p-3 sm:p-4 flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 shadow-2xs">
+        <div className="flex items-center gap-2">
+          <div className="inline-flex p-1 bg-stone-100 rounded-lg border border-stone-200 text-xs font-medium text-stone-700">
+            <button
+              type="button"
+              onClick={() => {
+                setLibraryScope('global');
+                setSelectedAuthor('all');
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer ${
+                libraryScope === 'global'
+                  ? 'bg-white text-stone-950 font-bold shadow-xs border border-stone-200/80'
+                  : 'hover:text-stone-950 text-stone-600'
+              }`}
+            >
+              <Globe className="w-3.5 h-3.5 text-stone-700" />
+              <span>Global Church Library</span>
+              <span className="ml-1 text-[11px] text-stone-500 font-mono tabular-nums">
+                ({items.length})
+              </span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setLibraryScope('my');
+                setSelectedAuthor('all');
+              }}
+              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md transition-all cursor-pointer ${
+                libraryScope === 'my'
+                  ? 'bg-white text-stone-950 font-bold shadow-xs border border-stone-200/80'
+                  : 'hover:text-stone-950 text-stone-600'
+              }`}
+            >
+              <User className="w-3.5 h-3.5 text-stone-700" />
+              <span>My Manuscripts</span>
+              <span className="ml-1 text-[11px] text-stone-500 font-mono tabular-nums">
+                ({myItemsCount})
+              </span>
+            </button>
+          </div>
+
+          {userIsAdmin && (
+            <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-semibold text-red-800 bg-red-50 border border-red-200 px-2 py-1 rounded">
+              <Shield className="w-3 h-3 text-red-700" />
+              <span>Admin Override Enabled</span>
+            </span>
+          )}
+        </div>
+
+        {/* Informational Subtext */}
+        <div className="text-xs text-stone-500 flex items-center gap-2">
+          {libraryScope === 'global' ? (
+            <span>
+              Browsing all church manuscripts. You can preach or print any sermon, and duplicate to your workbench.
+            </span>
+          ) : (
+            <span>
+              Showing manuscripts authored by <strong>{currentUser?.name}</strong>.
+            </span>
+          )}
         </div>
       </section>
 
@@ -192,7 +317,7 @@ export const VaultView: React.FC<VaultViewProps> = ({
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search manuscripts, scriptures (e.g. Romans 8), series, topics..."
+            placeholder="Search manuscripts, scriptures (e.g. Romans 8), preacher..."
             className="w-full pl-9 pr-4 py-2 bg-white border border-stone-200 rounded-md text-sm text-stone-800 placeholder-stone-400 focus:outline-none focus:border-stone-500 focus:ring-1 focus:ring-stone-500 transition-colors"
           />
         </div>
@@ -234,8 +359,27 @@ export const VaultView: React.FC<VaultViewProps> = ({
           ))}
         </div>
 
-        {/* Status & Tag Selectors */}
-        <div className="flex items-center gap-3 text-xs">
+        {/* Status, Author, & Tag Selectors */}
+        <div className="flex flex-wrap items-center gap-3 text-xs">
+          {/* Author filter (especially helpful in Global Church Library) */}
+          {allAuthors.length > 1 && (
+            <div className="flex items-center gap-1.5 text-stone-600">
+              <span>Author:</span>
+              <select
+                value={selectedAuthor}
+                onChange={(e) => setSelectedAuthor(e.target.value)}
+                className="bg-white border border-stone-200 rounded px-2 py-1 text-stone-800 focus:outline-none focus:border-stone-400 max-w-[150px]"
+              >
+                <option value="all">All Preachers</option>
+                {allAuthors.map((author) => (
+                  <option key={author} value={author}>
+                    {author}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
           <div className="flex items-center gap-1.5 text-stone-600">
             <span>Status:</span>
             <select
@@ -273,135 +417,181 @@ export const VaultView: React.FC<VaultViewProps> = ({
 
       {/* Grid of Vault Items */}
       <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredItems.map((item) => (
-          <article
-            key={item.id}
-            onClick={() => onSelectItem(item, 'studio')}
-            className="group relative flex flex-col justify-between bg-white border border-stone-200/90 rounded-lg p-5 hover:border-stone-400 hover:shadow-sm transition-all cursor-pointer"
-          >
-            {/* Top Area: Clean unboxed metadata (ZERO-PILL compliant) */}
-            <div>
-              <div className="flex items-center justify-between text-xs text-stone-500 mb-2 font-sans">
-                <div className="flex items-center gap-1.5 truncate">
-                  <span className="uppercase tracking-wider font-semibold text-stone-700 capitalize">
-                    {item.type}
-                  </span>
-                  <span aria-hidden="true">·</span>
-                  <span>{item.date}</span>
-                  {item.durationMinutes ? (
-                    <>
-                      <span aria-hidden="true">·</span>
-                      <span className="tabular-nums">{item.durationMinutes} min</span>
-                    </>
-                  ) : null}
+        {filteredItems.map((item) => {
+          const canEdit = canUserEditItem(currentUser || null, item);
+          const authorDisplay = item.authorName || item.preacher || 'Pastor';
+          const isOtherAuthor = item.authorId && currentUser && item.authorId !== currentUser.id;
+
+          return (
+            <article
+              key={item.id}
+              onClick={() => onSelectItem(item, 'studio')}
+              className="group relative flex flex-col justify-between bg-white border border-stone-200/90 rounded-lg p-5 hover:border-stone-400 hover:shadow-sm transition-all cursor-pointer"
+            >
+              {/* Top Area: Clean unboxed metadata (ZERO-PILL compliant) */}
+              <div>
+                <div className="flex items-center justify-between text-xs text-stone-500 mb-2 font-sans">
+                  <div className="flex items-center gap-1.5 truncate">
+                    <span className="uppercase tracking-wider font-semibold text-stone-700 capitalize">
+                      {item.type}
+                    </span>
+                    <span aria-hidden="true">·</span>
+                    <span>{item.date}</span>
+                    {item.durationMinutes ? (
+                      <>
+                        <span aria-hidden="true">·</span>
+                        <span className="tabular-nums">{item.durationMinutes} min</span>
+                      </>
+                    ) : null}
+                  </div>
+
+                  {/* Status & Permissions Indicator */}
+                  <div className="flex items-center gap-1.5">
+                    {userIsAdmin && isOtherAuthor ? (
+                      <span className="text-[10px] font-semibold text-red-700 bg-red-50 border border-red-200 px-1.5 py-0.2 rounded" title="Admin has full edit override">
+                        Admin Edit
+                      </span>
+                    ) : !canEdit ? (
+                      <span className="text-[10px] font-medium text-stone-500 bg-stone-100 px-1.5 py-0.2 rounded flex items-center gap-1" title="Read-only manuscript authored by another preacher">
+                        <Lock className="w-2.5 h-2.5 text-stone-400" />
+                        <span>Read-Only</span>
+                      </span>
+                    ) : null}
+
+                    <span className="text-[11px] capitalize text-stone-500 font-medium">
+                      {item.status}
+                    </span>
+                  </div>
                 </div>
-                <span className="text-[11px] capitalize text-stone-500 font-medium">
-                  {item.status}
-                </span>
-              </div>
 
-              {/* Title & Subtitle */}
-              <h2 className="text-xl font-serif-title font-semibold text-stone-900 group-hover:text-stone-800 leading-snug">
-                {item.title}
-              </h2>
+                {/* Preacher / Author Line */}
+                <div className="text-[11px] text-stone-500 font-sans mb-1 flex items-center gap-1.5">
+                  <span className="text-stone-400">By</span>
+                  <span className="font-semibold text-stone-700">{authorDisplay}</span>
+                </div>
 
-              {item.subtitle && (
-                <p className="text-xs text-stone-500 mt-1 line-clamp-1 font-reading italic">
-                  {item.subtitle}
-                </p>
-              )}
+                {/* Title & Subtitle */}
+                <h2 className="text-xl font-serif-title font-semibold text-stone-900 group-hover:text-stone-800 leading-snug">
+                  {item.title}
+                </h2>
 
-              {/* Primary Scripture Kicker */}
-              <div className="mt-3 flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenBibleExplorer(item.primaryScripture);
-                  }}
-                  className="text-xs font-semibold text-amber-900 hover:underline hover:text-amber-950 flex items-center gap-1"
-                >
-                  <BookOpen className="w-3.5 h-3.5" />
-                  <span>{item.primaryScripture}</span>
-                </button>
-                {item.series && (
-                  <span className="text-xs text-stone-400 truncate">
-                    ({item.series})
-                  </span>
+                {item.subtitle && (
+                  <p className="text-xs text-stone-500 mt-1 line-clamp-1 font-reading italic">
+                    {item.subtitle}
+                  </p>
+                )}
+
+                {/* Primary Scripture Kicker */}
+                <div className="mt-3 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onOpenBibleExplorer(item.primaryScripture);
+                    }}
+                    className="text-xs font-semibold text-amber-900 hover:underline hover:text-amber-950 flex items-center gap-1"
+                  >
+                    <BookOpen className="w-3.5 h-3.5" />
+                    <span>{item.primaryScripture}</span>
+                  </button>
+                  {item.series && (
+                    <span className="text-xs text-stone-400 truncate">
+                      ({item.series})
+                    </span>
+                  )}
+                </div>
+
+                {/* Big Idea Excerpt */}
+                {item.bigIdea && (
+                  <p className="mt-3 text-xs text-stone-600 line-clamp-2 leading-relaxed bg-[#FBF9F5] p-2.5 rounded border border-stone-100">
+                    <strong className="font-semibold text-stone-800">Big Idea: </strong>
+                    {item.bigIdea}
+                  </p>
                 )}
               </div>
 
-              {/* Big Idea Excerpt */}
-              {item.bigIdea && (
-                <p className="mt-3 text-xs text-stone-600 line-clamp-2 leading-relaxed bg-[#FBF9F5] p-2.5 rounded border border-stone-100">
-                  <strong className="font-semibold text-stone-800">Big Idea: </strong>
-                  {item.bigIdea}
-                </p>
-              )}
-            </div>
+              {/* Bottom Area: Tags and Actions */}
+              <div className="mt-5 pt-3 border-t border-stone-100">
+                {/* Tags */}
+                {item.tags.length > 0 && (
+                  <div className="text-[11px] text-stone-500 mb-3 flex flex-wrap gap-x-2 gap-y-0.5">
+                    {item.tags.map((t, idx) => (
+                      <span key={t}>
+                        #{t}
+                        {idx < item.tags.length - 1 ? ' ' : ''}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
-            {/* Bottom Area: Tags, Cross-references, and Quick Actions */}
-            <div className="mt-5 pt-3 border-t border-stone-100">
-              {/* Tags inline text (No static pills) */}
-              {item.tags.length > 0 && (
-                <div className="text-[11px] text-stone-500 mb-3 flex flex-wrap gap-x-2 gap-y-0.5">
-                  {item.tags.map((t, idx) => (
-                    <span key={t}>
-                      #{t}
-                      {idx < item.tags.length - 1 ? ' ' : ''}
-                    </span>
-                  ))}
-                </div>
-              )}
+                {/* Action Buttons Row */}
+                <div className="flex items-center justify-between text-xs pt-1">
+                  <div className="flex items-center gap-1.5">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectItem(item, 'preach');
+                      }}
+                      title="Launch Pulpit Preach Mode"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 rounded transition-colors"
+                    >
+                      <Mic className="w-3 h-3 text-stone-600" />
+                      <span>Pulpit</span>
+                    </button>
 
-              {/* Action Buttons Row */}
-              <div className="flex items-center justify-between text-xs pt-1">
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectItem(item, 'preach');
-                    }}
-                    title="Launch Pulpit Preach Mode"
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 rounded transition-colors"
-                  >
-                    <Mic className="w-3 h-3 text-stone-600" />
-                    <span>Pulpit</span>
-                  </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectItem(item, 'handout');
+                      }}
+                      title="View Handout & Bulletins"
+                      className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 rounded transition-colors"
+                    >
+                      <FileText className="w-3 h-3 text-stone-600" />
+                      <span>Handout</span>
+                    </button>
+                  </div>
 
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onSelectItem(item, 'handout');
-                    }}
-                    title="View Handout & Bulletins"
-                    className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 rounded transition-colors"
-                  >
-                    <FileText className="w-3 h-3 text-stone-600" />
-                    <span>Handout</span>
-                  </button>
-                </div>
+                  <div className="flex items-center gap-1">
+                    {/* Clone button: Available if it's someone else's sermon or in general */}
+                    {onCloneItem && !canEdit && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onCloneItem(item);
+                        }}
+                        title="Duplicate to My Personal Workbench to edit and adapt"
+                        className="inline-flex items-center gap-1 px-2 py-1 text-[11px] font-medium text-stone-700 bg-stone-100 hover:bg-stone-200 rounded transition-colors cursor-pointer"
+                      >
+                        <Copy className="w-3 h-3 text-stone-500" />
+                        <span>Clone</span>
+                      </button>
+                    )}
 
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={(e) => handleDownloadMarkdown(e, item)}
-                    title="Download as Markdown (.md)"
-                    className="p-1.5 text-stone-400 hover:text-stone-700 transition-colors"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                  </button>
-                  <button
-                    onClick={(e) => handleDelete(e, item.id)}
-                    title="Delete document"
-                    className="p-1.5 text-stone-400 hover:text-stone-700 transition-colors"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                    <button
+                      onClick={(e) => handleDownloadMarkdown(e, item)}
+                      title="Download as Markdown (.md)"
+                      className="p-1.5 text-stone-400 hover:text-stone-700 transition-colors"
+                    >
+                      <Download className="w-3.5 h-3.5" />
+                    </button>
+
+                    {/* Delete button: Only for Author or ADMIN */}
+                    {canEdit && (
+                      <button
+                        onClick={(e) => handleDelete(e, item)}
+                        title={userIsAdmin && isOtherAuthor ? "Delete sermon as Administrator" : "Delete document"}
+                        className="p-1.5 text-stone-400 hover:text-red-600 transition-colors"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
-            </div>
-          </article>
-        ))}
+            </article>
+          );
+        })}
       </section>
 
       {/* Empty State */}
@@ -409,18 +599,31 @@ export const VaultView: React.FC<VaultViewProps> = ({
         <div className="text-center py-16 bg-white border border-stone-200/90 rounded-lg p-8">
           <BookOpen className="w-10 h-10 text-stone-300 mx-auto mb-3" />
           <h3 className="text-lg font-serif-title font-medium text-stone-800">
-            No manuscripts found
+            No manuscripts found in this view
           </h3>
           <p className="text-xs text-stone-500 max-w-sm mx-auto mt-1">
-            Try adjusting your search terms or filters, or begin drafting a fresh sermon manuscript.
+            {libraryScope === 'my'
+              ? 'You do not have any personal manuscripts authored under this profile yet. Switch to the Global Church Library or create a new sermon.'
+              : 'Try adjusting your search terms or filters, or begin drafting a fresh sermon manuscript.'}
           </p>
-          <button
-            onClick={() => onNewItem('sermon')}
-            className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 bg-stone-900 text-stone-50 text-xs font-medium rounded hover:bg-stone-800 transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>Create New Sermon</span>
-          </button>
+          <div className="flex justify-center gap-3 mt-4">
+            {libraryScope === 'my' && (
+              <button
+                onClick={() => setLibraryScope('global')}
+                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-stone-100 border border-stone-300 text-stone-800 text-xs font-medium rounded hover:bg-stone-200 transition-colors"
+              >
+                <Globe className="w-3.5 h-3.5" />
+                <span>Browse Global Library</span>
+              </button>
+            )}
+            <button
+              onClick={() => onNewItem('sermon')}
+              className="inline-flex items-center gap-1.5 px-4 py-2 bg-stone-900 text-stone-50 text-xs font-medium rounded hover:bg-stone-800 transition-colors"
+            >
+              <Plus className="w-3.5 h-3.5" />
+              <span>Create New Sermon</span>
+            </button>
+          </div>
         </div>
       )}
     </div>

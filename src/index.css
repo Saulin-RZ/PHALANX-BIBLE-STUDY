@@ -42,12 +42,29 @@
     font-size: 11pt !important;
   }
 
-  .no-print {
+  header,
+  nav,
+  aside,
+  .no-print,
+  button,
+  .fixed,
+  .absolute {
     display: none !important;
   }
 
+  #pulpit-printable-doc,
+  #handout-printable-doc,
   .print-only {
     display: block !important;
+    position: static !important;
+    box-shadow: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
   }
 
   .page-break-before {

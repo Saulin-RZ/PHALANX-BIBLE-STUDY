@@ -19,7 +19,11 @@ import {
   loadUsers,
   setCurrentUserId,
   logoutUser,
-  loadUserVault,
+  loadGlobalChurchLibrary,
+  saveItemToTargetVault,
+  deleteItemFromTargetVault,
+  cloneSermonToWorkbench,
+  canUserEditItem,
   saveUserVault
 } from './utils/authStorage';
 
@@ -28,17 +32,14 @@ export default function App() {
   const [users, setUsers] = useState<UserProfile[]>(() => loadUsers());
   const [isUserSwitcherOpen, setIsUserSwitcherOpen] = useState(false);
 
-  // Vault items for the active user
-  const [vaultItems, setVaultItems] = useState<VaultItem[]>(() => {
-    const user = getCurrentUser();
-    return user ? loadUserVault(user.id) : [];
+  // Global Church Library containing all sermons from all preachers
+  const [churchItems, setChurchItems] = useState<VaultItem[]>(() => {
+    return loadGlobalChurchLibrary();
   });
 
   const [activeItemId, setActiveItemId] = useState<string>(() => {
-    const user = getCurrentUser();
-    if (!user) return '';
-    const initial = loadUserVault(user.id);
-    return initial[0]?.id || '';
+    const all = loadGlobalChurchLibrary();
+    return all[0]?.id || '';
   });
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('vault');
@@ -46,48 +47,47 @@ export default function App() {
   const [selectedPassageForExplorer, setSelectedPassageForExplorer] = useState<string | undefined>(undefined);
 
   // Active item lookup
-  const activeItem = vaultItems.find((i) => i.id === activeItemId) || vaultItems[0];
+  const activeItem = churchItems.find((i) => i.id === activeItemId) || churchItems[0];
 
-  // Auto-save vault on state change for the current user
-  useEffect(() => {
-    if (currentUser) {
-      saveUserVault(currentUser.id, vaultItems);
+  // Refresh church items when currentUser changes
+  const refreshLibrary = () => {
+    const all = loadGlobalChurchLibrary();
+    setChurchItems(all);
+    if (!activeItemId && all.length > 0) {
+      setActiveItemId(all[0].id);
     }
-  }, [vaultItems, currentUser]);
+  };
+
+  // Check if current user can edit the currently active item
+  const canEditActiveItem = currentUser ? canUserEditItem(currentUser, activeItem) : false;
 
   // Handle successful login from LoginScreen
   const handleLoginSuccess = (user: UserProfile) => {
     setCurrentUserId(user.id);
     setCurrentUser(user);
     setUsers(loadUsers());
-    const items = loadUserVault(user.id);
-    setVaultItems(items);
-    setActiveItemId(items[0]?.id || '');
+    const all = loadGlobalChurchLibrary();
+    setChurchItems(all);
+    setActiveItemId(all[0]?.id || '');
     setActiveTab('vault');
   };
 
   // Switch between existing profiles
   const handleSelectUser = (newUser: UserProfile) => {
-    if (currentUser) {
-      // Save outgoing user's data first
-      saveUserVault(currentUser.id, vaultItems);
-    }
     setCurrentUserId(newUser.id);
     setCurrentUser(newUser);
-    const loaded = loadUserVault(newUser.id);
-    setVaultItems(loaded);
-    setActiveItemId(loaded[0]?.id || '');
+    const all = loadGlobalChurchLibrary();
+    setChurchItems(all);
+    if (!activeItemId && all.length > 0) {
+      setActiveItemId(all[0].id);
+    }
     setActiveTab('vault');
   };
 
   // Log out to Login screen
   const handleLogout = () => {
-    if (currentUser) {
-      saveUserVault(currentUser.id, vaultItems);
-    }
     logoutUser();
     setCurrentUser(null);
-    setVaultItems([]);
     setActiveItemId('');
   };
 
@@ -101,12 +101,15 @@ export default function App() {
         setCurrentUser(refreshedCurrent);
       }
     }
+    refreshLibrary();
   };
 
   // Create new sermon/study/illustration
   const handleNewItem = (type: VaultItemType = 'sermon', initialScripture?: string) => {
+    if (!currentUser) return;
+
     const today = new Date().toISOString().slice(0, 10);
-    const preacherName = currentUser?.name || 'Pastor';
+    const preacherName = currentUser.name || 'Pastor';
 
     const newItem: VaultItem = {
       id: `work-${Date.now()}`,
@@ -117,6 +120,8 @@ export default function App() {
       series: '',
       date: today,
       preacher: preacherName,
+      authorId: currentUser.id,
+      authorName: currentUser.name,
       primaryScripture: initialScripture || 'Romans 8:28',
       secondaryScriptures: [],
       tags: ['Grace'],
@@ -154,37 +159,49 @@ export default function App() {
       updatedAt: new Date().toISOString(),
     };
 
-    setVaultItems((prev) => [newItem, ...prev]);
+    saveItemToTargetVault(newItem, currentUser.id);
+    const updatedLibrary = [newItem, ...churchItems];
+    setChurchItems(updatedLibrary);
     setActiveItemId(newItem.id);
     setActiveTab('studio');
   };
 
   // Update item
   const handleUpdateItem = (updated: VaultItem) => {
-    setVaultItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+    if (!currentUser) return;
+    saveItemToTargetVault(updated, currentUser.id);
+    setChurchItems((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
   };
 
   // Delete item
-  const handleDeleteItem = (id: string) => {
-    setVaultItems((prev) => prev.filter((item) => item.id !== id));
+  const handleDeleteItem = (id: string, authorId?: string) => {
+    if (!currentUser) return;
+    deleteItemFromTargetVault(id, authorId, currentUser.id);
+    const remaining = churchItems.filter((item) => item.id !== id);
+    setChurchItems(remaining);
     if (activeItemId === id) {
-      const remaining = vaultItems.filter((item) => item.id !== id);
-      if (remaining.length > 0) {
-        setActiveItemId(remaining[0].id);
-      } else {
-        setActiveItemId('');
-      }
+      setActiveItemId(remaining[0]?.id || '');
     }
+  };
+
+  // Clone/Duplicate another preacher's sermon to the current user's workbench
+  const handleCloneItem = (source: VaultItem) => {
+    if (!currentUser) return;
+    const cloned = cloneSermonToWorkbench(source, currentUser);
+    const updatedLibrary = [cloned, ...churchItems];
+    setChurchItems(updatedLibrary);
+    setActiveItemId(cloned.id);
+    setActiveTab('studio');
   };
 
   // Import vault replacement
   const handleImportVault = (imported: VaultItem[]) => {
-    setVaultItems(imported);
+    if (!currentUser) return;
+    saveUserVault(currentUser.id, imported);
+    const all = loadGlobalChurchLibrary();
+    setChurchItems(all);
     if (imported.length > 0) {
       setActiveItemId(imported[0].id);
-    }
-    if (currentUser) {
-      saveUserVault(currentUser.id, imported);
     }
   };
 
@@ -229,11 +246,12 @@ export default function App() {
       <div className="flex-1">
         {activeTab === 'vault' && (
           <VaultView
-            items={vaultItems}
+            items={churchItems}
             currentUser={currentUser}
             onSelectItem={handleSelectItem}
             onNewItem={handleNewItem}
             onDeleteItem={handleDeleteItem}
+            onCloneItem={handleCloneItem}
             onOpenGitModal={() => setIsGitModalOpen(true)}
             onOpenBibleExplorer={handleOpenBibleExplorer}
             onOpenUserSwitcher={() => setIsUserSwitcherOpen(true)}
@@ -243,10 +261,13 @@ export default function App() {
         {activeTab === 'studio' && activeItem && (
           <SermonStudio
             item={activeItem}
+            currentUser={currentUser}
+            canEdit={canEditActiveItem}
             onUpdateItem={handleUpdateItem}
             onLaunchPreachMode={() => setActiveTab('preach')}
             onViewHandout={() => setActiveTab('handout')}
             onOpenBibleExplorer={handleOpenBibleExplorer}
+            onCloneToWorkbench={handleCloneItem}
           />
         )}
 
@@ -256,18 +277,18 @@ export default function App() {
               No Sermon Selected
             </h2>
             <p className="text-sm text-stone-500">
-              Your personal library currently has no selected manuscript. Choose an existing sermon from your vault or create a new one.
+              Your personal library currently has no selected manuscript. Choose an existing sermon from the Global Church Library or create a new one.
             </p>
             <div className="flex justify-center gap-3 pt-2">
               <button
                 onClick={() => setActiveTab('vault')}
-                className="px-4 py-2 border border-stone-300 text-stone-700 rounded text-xs font-medium hover:bg-stone-100"
+                className="px-4 py-2 border border-stone-300 text-stone-700 rounded text-xs font-medium hover:bg-stone-100 cursor-pointer"
               >
                 Go to Vault
               </button>
               <button
                 onClick={() => handleNewItem('sermon')}
-                className="px-4 py-2 bg-stone-900 text-stone-50 rounded text-xs font-medium hover:bg-stone-800"
+                className="px-4 py-2 bg-stone-900 text-stone-50 rounded text-xs font-medium hover:bg-stone-800 cursor-pointer"
               >
                 + Create New Sermon
               </button>
@@ -286,6 +307,7 @@ export default function App() {
         {activeTab === 'handout' && activeItem && (
           <HandoutView
             item={activeItem}
+            canEdit={canEditActiveItem}
             onUpdateItem={handleUpdateItem}
             onReturnToStudio={() => setActiveTab('studio')}
           />
@@ -293,7 +315,7 @@ export default function App() {
 
         {activeTab === 'scripture' && (
           <ScriptureExplorer
-            vaultItems={vaultItems}
+            vaultItems={churchItems}
             initialPassage={selectedPassageForExplorer}
             onSelectItem={(item) => {
               setActiveItemId(item.id);
@@ -319,7 +341,7 @@ export default function App() {
       <GitSyncModal
         isOpen={isGitModalOpen}
         onClose={() => setIsGitModalOpen(false)}
-        vaultItems={vaultItems}
+        vaultItems={churchItems}
         onImportVault={handleImportVault}
       />
     </div>

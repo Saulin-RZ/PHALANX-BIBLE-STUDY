@@ -289,15 +289,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                   {users.map((u) => {
                     const vaultCount = loadUserVault(u.id).length;
+                    const isAccountAdmin = u.isAdmin || u.role === 'Administrator';
+
                     return (
                       <div
                         key={u.id}
                         onClick={() => handleSelectProfile(u)}
-                        className="group flex items-start gap-3.5 p-4 rounded-xl border border-stone-200/90 bg-[#FAF8F5] hover:bg-white hover:border-stone-400 hover:shadow-md transition-all cursor-pointer text-left"
+                        className={`group flex items-start gap-3.5 p-4 rounded-xl border transition-all cursor-pointer text-left ${
+                          isAccountAdmin
+                            ? 'border-red-300 bg-red-50/40 hover:bg-white hover:border-red-500 hover:shadow-md'
+                            : 'border-stone-200/90 bg-[#FAF8F5] hover:bg-white hover:border-stone-400 hover:shadow-md'
+                        }`}
                       >
                         <div
                           className="w-11 h-11 rounded-full flex items-center justify-center font-bold text-sm text-white shrink-0 shadow-xs"
-                          style={{ backgroundColor: u.color || '#78350f' }}
+                          style={{ backgroundColor: u.color || (isAccountAdmin ? '#991b1b' : '#78350f') }}
                         >
                           {u.avatarInitials}
                         </div>
@@ -307,14 +313,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                             <h3 className="font-semibold text-sm text-stone-900 group-hover:text-stone-950 truncate">
                               {u.name}
                             </h3>
+                            {isAccountAdmin && (
+                              <span className="text-[10px] font-bold text-red-700 bg-red-100 border border-red-300 px-1.5 py-0.2 rounded uppercase">
+                                Admin
+                              </span>
+                            )}
                             {u.pin && (
-                              <span title="PIN Protected Profile">
+                              <span title={`PIN Protected (Admin PIN: 0129)`}>
                                 <Lock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
                               </span>
                             )}
                           </div>
                           <p className="text-xs text-stone-500 font-sans mt-0.5 truncate">
-                            {u.role}
+                            {isAccountAdmin ? 'System Administrator (PIN: 0129)' : u.role}
                           </p>
                           <div className="flex items-center gap-2 mt-2 pt-2 border-t border-stone-200/60 text-[11px] text-stone-600 font-mono">
                             <span className="bg-stone-200/70 px-1.5 py-0.5 rounded text-stone-800">
@@ -370,7 +381,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ onLoginSuccess }) => {
                     Welcome back, {selectedUser.name}
                   </h3>
                   <p className="text-xs text-stone-500 mt-1">
-                    This profile is protected with a personal security PIN.
+                    {selectedUser.id === 'usr-admin' || selectedUser.username === 'admin'
+                      ? 'ADMIN Master Security PIN is 0129.'
+                      : 'Enter personal security PIN (or Master Admin PIN 0129).'}
                   </p>
                 </div>
 

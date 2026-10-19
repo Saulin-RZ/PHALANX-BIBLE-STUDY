@@ -3,6 +3,7 @@ export type VaultItemType = 'sermon' | 'study' | 'illustration' | 'exegesis';
 export type SermonStatus = 'draft' | 'in-progress' | 'preached' | 'archived';
 
 export type PreacherRole =
+  | 'Administrator'
   | 'Senior Pastor'
   | 'Associate Pastor'
   | 'Guest Preacher'
@@ -12,13 +13,14 @@ export type PreacherRole =
 
 export interface UserProfile {
   id: string;
-  username: string; // e.g. "saul", "guest"
-  name: string; // e.g. "Pastor Saul R."
+  username: string; // e.g. "saul", "admin", "guest"
+  name: string; // e.g. "ADMIN", "Pastor Saul R."
   email?: string;
   role: PreacherRole;
   avatarInitials: string;
-  color: string; // CSS color string e.g. "amber", "stone", "emerald", "blue"
-  pin?: string; // Optional 4-digit PIN for profile security
+  color: string; // CSS color string e.g. "#991b1b", "#78350f"
+  pin?: string; // e.g. "0129"
+  isAdmin?: boolean; // Flag granting universal access and editing rights
   createdAt: string;
   lastActive: string;
 }
@@ -65,6 +67,8 @@ export interface VaultItem {
   series?: string;
   date: string; // YYYY-MM-DD
   preacher: string;
+  authorId?: string; // ID of the user who owns or authored this sermon
+  authorName?: string; // Display name of the author
   primaryScripture: string;
   secondaryScriptures: string[];
   tags: string[];

@@ -5,12 +5,14 @@ import { downloadFile, printHandoutDocument } from '../../utils/vaultStorage';
 
 interface HandoutViewProps {
   item: VaultItem;
+  canEdit?: boolean;
   onUpdateItem: (updated: VaultItem) => void;
   onReturnToStudio: () => void;
 }
 
 export const HandoutView: React.FC<HandoutViewProps> = ({
   item,
+  canEdit = true,
   onUpdateItem,
   onReturnToStudio,
 }) => {
@@ -185,13 +187,15 @@ export const HandoutView: React.FC<HandoutViewProps> = ({
               Type <code className="font-mono text-stone-700 font-semibold">______</code> (underscores) where you want a blank for the listener to write in.
             </p>
           </div>
-          <button
-            onClick={handleAddHandoutItem}
-            className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium bg-stone-100 hover:bg-stone-200 text-stone-800 rounded transition-colors"
-          >
-            <Plus className="w-3 h-3" />
-            <span>+ Add Blank Point</span>
-          </button>
+          {canEdit && (
+            <button
+              onClick={handleAddHandoutItem}
+              className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium bg-stone-100 hover:bg-stone-200 text-stone-800 rounded transition-colors"
+            >
+              <Plus className="w-3 h-3" />
+              <span>+ Add Blank Point</span>
+            </button>
+          )}
         </div>
 
         <div className="space-y-3">
@@ -204,17 +208,20 @@ export const HandoutView: React.FC<HandoutViewProps> = ({
                 <span className="font-mono font-bold text-stone-500 pt-1">{idx + 1}.</span>
                 <input
                   type="text"
+                  disabled={!canEdit}
                   value={h.question}
                   onChange={(e) => handleUpdateHandoutItem(h.id, { question: e.target.value })}
                   placeholder="e.g. God causes all things to work together for good because He is ______."
-                  className="flex-1 px-2.5 py-1 bg-white border border-stone-200 rounded text-stone-900 font-reading focus:outline-none"
+                  className="flex-1 px-2.5 py-1 bg-white border border-stone-200 rounded text-stone-900 font-reading focus:outline-none disabled:cursor-default"
                 />
-                <button
-                  onClick={() => handleRemoveHandoutItem(h.id)}
-                  className="text-stone-400 hover:text-red-600 p-1"
-                >
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {canEdit && (
+                  <button
+                    onClick={() => handleRemoveHandoutItem(h.id)}
+                    className="text-stone-400 hover:text-red-600 p-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pl-6">
