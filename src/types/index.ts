@@ -2,6 +2,27 @@ export type VaultItemType = 'sermon' | 'study' | 'illustration' | 'exegesis';
 
 export type SermonStatus = 'draft' | 'in-progress' | 'preached' | 'archived';
 
+export type PreacherRole =
+  | 'Senior Pastor'
+  | 'Associate Pastor'
+  | 'Guest Preacher'
+  | 'Teaching Elder'
+  | 'Seminary Student'
+  | 'Bible Teacher';
+
+export interface UserProfile {
+  id: string;
+  username: string; // e.g. "saul", "guest"
+  name: string; // e.g. "Pastor Saul R."
+  email?: string;
+  role: PreacherRole;
+  avatarInitials: string;
+  color: string; // CSS color string e.g. "amber", "stone", "emerald", "blue"
+  pin?: string; // Optional 4-digit PIN for profile security
+  createdAt: string;
+  lastActive: string;
+}
+
 export interface OutlinePoint {
   id: string;
   level: 1 | 2 | 3;

@@ -2,32 +2,16 @@ import JSZip from 'jszip';
 import { INITIAL_VAULT } from '../data/initialVault';
 import { VaultItem } from '../types';
 
-const STORAGE_KEY = 'kerygma_sermon_vault_v1';
+import { getCurrentUserId, loadUserVault, saveUserVault } from './authStorage';
 
-export function loadVault(): VaultItem[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) {
-      saveVault(INITIAL_VAULT);
-      return INITIAL_VAULT;
-    }
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed) && parsed.length > 0) {
-      return parsed;
-    }
-    return INITIAL_VAULT;
-  } catch (err) {
-    console.error('Failed to load vault from localStorage', err);
-    return INITIAL_VAULT;
-  }
+export function loadVault(userId?: string): VaultItem[] {
+  const uid = userId || getCurrentUserId() || 'usr-saul';
+  return loadUserVault(uid);
 }
 
-export function saveVault(items: VaultItem[]): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(items));
-  } catch (err) {
-    console.error('Failed to save vault to localStorage', err);
-  }
+export function saveVault(items: VaultItem[], userId?: string): void {
+  const uid = userId || getCurrentUserId() || 'usr-saul';
+  saveUserVault(uid, items);
 }
 
 export function convertItemToMarkdown(item: VaultItem): string {

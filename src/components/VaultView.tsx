@@ -16,26 +16,30 @@ import {
   Trash2,
   Copy
 } from 'lucide-react';
-import { VaultItem, VaultItemType, SermonStatus } from '../types';
+import { VaultItem, VaultItemType, SermonStatus, UserProfile } from '../types';
 import deskHeroImage from '../assets/images/sermon_manuscript_desk_1792367924247.jpg';
 import { convertItemToMarkdown, downloadFile } from '../utils/vaultStorage';
 
 interface VaultViewProps {
   items: VaultItem[];
+  currentUser?: UserProfile;
   onSelectItem: (item: VaultItem, view: 'studio' | 'preach' | 'handout') => void;
   onNewItem: (type?: VaultItemType) => void;
   onDeleteItem: (id: string) => void;
   onOpenGitModal: () => void;
   onOpenBibleExplorer: (passage?: string) => void;
+  onOpenUserSwitcher?: () => void;
 }
 
 export const VaultView: React.FC<VaultViewProps> = ({
   items,
+  currentUser,
   onSelectItem,
   onNewItem,
   onDeleteItem,
   onOpenGitModal,
   onOpenBibleExplorer,
+  onOpenUserSwitcher,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedType, setSelectedType] = useState<VaultItemType | 'all'>('all');
@@ -102,10 +106,29 @@ export const VaultView: React.FC<VaultViewProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
           <div className="lg:col-span-7 p-6 sm:p-8 lg:p-10 flex flex-col justify-between">
             <div>
-              <div className="flex items-center gap-2 text-xs text-stone-600 mb-3 tracking-widest uppercase font-sans">
-                <span>Homiletical & Exegetical Vault</span>
-                <span aria-hidden="true">·</span>
-                <span>Version-Controlled Archive</span>
+              <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
+                <div className="flex items-center gap-2 text-xs text-stone-600 tracking-widest uppercase font-sans">
+                  <span>Homiletical & Exegetical Vault</span>
+                  <span aria-hidden="true">·</span>
+                  <span>Version-Controlled Archive</span>
+                </div>
+                {currentUser && (
+                  <button
+                    onClick={onOpenUserSwitcher}
+                    title="Switch or manage preacher profiles"
+                    className="inline-flex items-center gap-2 px-2.5 py-1 bg-white/90 hover:bg-white border border-stone-300 rounded-full text-xs text-stone-800 transition-all cursor-pointer shadow-2xs group"
+                  >
+                    <span
+                      className="w-2.5 h-2.5 rounded-full ring-1 ring-black/10"
+                      style={{ backgroundColor: currentUser.color || '#78350f' }}
+                    />
+                    <span className="font-semibold">{currentUser.name}</span>
+                    <span className="text-stone-500 font-sans hidden sm:inline">({currentUser.role})</span>
+                    <span className="text-[10px] text-stone-400 group-hover:text-stone-900 border-l border-stone-200 pl-1.5 uppercase font-mono transition-colors">
+                      Switch
+                    </span>
+                  </button>
+                )}
               </div>
               <h1 className="text-3xl sm:text-4xl lg:text-5xl font-serif-title font-medium text-stone-900 leading-tight">
                 Crafted for the Pulpit, Anchored in the Word
