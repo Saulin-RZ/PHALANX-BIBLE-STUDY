@@ -18,11 +18,13 @@ import {
   Eye,
   CornerDownRight,
   Quote,
-  Sparkles
+  Sparkles,
+  Printer
 } from 'lucide-react';
 import { VaultItem, OutlinePoint, KeyTermStudy } from '../../types';
 import { convertItemToMarkdown, downloadFile } from '../../utils/vaultStorage';
 import { SAMPLE_SCRIPTURES } from '../../data/scripturePassages';
+import { PulpitPdfModal } from './PulpitPdfModal';
 
 interface SermonStudioProps {
   item: VaultItem;
@@ -44,6 +46,7 @@ export const SermonStudio: React.FC<SermonStudioProps> = ({
   const [newTagInput, setNewTagInput] = useState('');
   const [showScriptureSidebar, setShowScriptureSidebar] = useState(true);
   const [scriptureSearch, setScriptureSearch] = useState('');
+  const [isPulpitPdfOpen, setIsPulpitPdfOpen] = useState(false);
 
   // Field change helper
   const handleChange = <K extends keyof VaultItem>(field: K, value: VaultItem[K]) => {
@@ -181,19 +184,28 @@ export const SermonStudio: React.FC<SermonStudioProps> = ({
               const md = convertItemToMarkdown(item);
               downloadFile(md, `${item.date || 'note'}-${item.slug || 'work'}.md`);
             }}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white border border-stone-200 text-stone-700 rounded hover:bg-stone-50 transition-colors cursor-pointer"
-            title="Download Git Markdown"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white border border-stone-200 text-stone-700 rounded hover:bg-stone-50 hover:text-stone-900 transition-colors cursor-pointer"
+            title="Download sermon manuscript and outline as Markdown (.md) with YAML frontmatter"
           >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export .md</span>
+            <Download className="w-3.5 h-3.5 text-stone-600" />
+            <span>Download .md</span>
+          </button>
+
+          <button
+            onClick={() => setIsPulpitPdfOpen(true)}
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-amber-50 border border-amber-300 text-amber-950 rounded hover:bg-amber-100 transition-colors cursor-pointer shadow-2xs"
+            title="Print or Save PDF formatted specifically for preaching at the pulpit lectern"
+          >
+            <Printer className="w-3.5 h-3.5 text-amber-800" />
+            <span>Pulpit PDF</span>
           </button>
 
           <button
             onClick={onViewHandout}
             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-white border border-stone-200 text-stone-700 rounded hover:bg-stone-50 transition-colors cursor-pointer"
-            title="Generate Congregation Handout & PDF"
+            title="Generate Congregation Handout & Leader Key"
           >
-            <FileText className="w-3.5 h-3.5" />
+            <FileText className="w-3.5 h-3.5 text-stone-600" />
             <span>Handout</span>
           </button>
 
@@ -203,7 +215,7 @@ export const SermonStudio: React.FC<SermonStudioProps> = ({
             title="Launch live pulpit lectern mode"
           >
             <Mic className="w-3.5 h-3.5" />
-            <span>Pulpit Mode</span>
+            <span>Preach Mode</span>
           </button>
         </div>
       </div>
@@ -418,28 +430,53 @@ export const SermonStudio: React.FC<SermonStudioProps> = ({
           {/* TAB 1: Manuscript & Notes */}
           {activeTab === 'manuscript' && (
             <div className="bg-white border border-stone-200 rounded-lg p-5 space-y-4 shadow-2xs">
-              {/* Speaker Cue Insertion Bar */}
-              <div className="flex flex-wrap items-center gap-1.5 text-xs pb-3 border-b border-stone-100">
-                <span className="text-[11px] font-semibold text-stone-500 uppercase tracking-wider mr-1">
-                  Insert Cue:
-                </span>
-                {[
-                  'PAUSE 3s',
-                  'LOOK UP',
-                  'EMPHASIZE',
-                  'READ SCRIPTURE',
-                  'ILLUSTRATION',
-                  'LOWER VOICE',
-                  'CONGREGATION RESPONSE',
-                ].map((cue) => (
+              {/* Speaker Cue Insertion Bar & Quick Pulpit Actions */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-stone-100 text-xs">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-[11px] font-semibold text-stone-500 uppercase tracking-wider mr-1">
+                    Insert Cue:
+                  </span>
+                  {[
+                    'PAUSE 3s',
+                    'LOOK UP',
+                    'EMPHASIZE',
+                    'READ SCRIPTURE',
+                    'ILLUSTRATION',
+                    'LOWER VOICE',
+                    'CONGREGATION RESPONSE',
+                  ].map((cue) => (
+                    <button
+                      key={cue}
+                      onClick={() => insertSpeakerCue(cue)}
+                      className="px-2 py-0.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded text-[11px] font-mono-code transition-colors cursor-pointer"
+                    >
+                      +{cue}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0 pt-1 sm:pt-0">
                   <button
-                    key={cue}
-                    onClick={() => insertSpeakerCue(cue)}
-                    className="px-2 py-0.5 bg-stone-100 hover:bg-stone-200 text-stone-700 rounded text-[11px] font-mono-code transition-colors cursor-pointer"
+                    onClick={() => {
+                      const md = convertItemToMarkdown(item);
+                      downloadFile(md, `${item.date || 'note'}-${item.slug || 'work'}.md`);
+                    }}
+                    className="inline-flex items-center gap-1 text-[11px] font-medium text-stone-600 hover:text-stone-900 bg-stone-50 hover:bg-stone-100 px-2 py-1 rounded border border-stone-200 transition-colors"
+                    title="Download .md file"
                   >
-                    +{cue}
+                    <Download className="w-3 h-3 text-stone-500" />
+                    <span>.md</span>
                   </button>
-                ))}
+
+                  <button
+                    onClick={() => setIsPulpitPdfOpen(true)}
+                    className="inline-flex items-center gap-1 text-[11px] font-medium text-amber-900 hover:text-amber-950 bg-amber-50 hover:bg-amber-100 px-2 py-1 rounded border border-amber-300/80 transition-colors"
+                    title="Print / Save Pulpit PDF"
+                  >
+                    <Printer className="w-3 h-3 text-amber-800" />
+                    <span>Pulpit PDF</span>
+                  </button>
+                </div>
               </div>
 
               {/* Textarea */}
@@ -767,6 +804,13 @@ export const SermonStudio: React.FC<SermonStudioProps> = ({
           </aside>
         )}
       </div>
+
+      {/* Pulpit PDF Print & Export Modal */}
+      <PulpitPdfModal
+        isOpen={isPulpitPdfOpen}
+        onClose={() => setIsPulpitPdfOpen(false)}
+        item={item}
+      />
     </div>
   );
 };
